@@ -30,10 +30,10 @@ local TabCombat = Window:Tab({ Title = "COMBAT", Icon = "crosshair" })
 local TabPlayer = Window:Tab({ Title = "PLAYER", Icon = "user" })
 local TabItems = Window:Tab({ Title = "ITEMS", Icon = "package" })
 local TabSettings = Window:Tab({ Title = "SETTINGS", Icon = "settings" })
-local TabModCar = Window:Tab({ Title = "MOD CAR", Icon = "car" }) -- ✅ NUEVA PESTAÑA MOD CAR
+local TabModCar = Window:Tab({ Title = "MOD CAR", Icon = "car" })
 
 -- ==========================================
--- CONFIG MANAGER (Blindado contra errores)
+-- CONFIG MANAGER
 -- ==========================================
 local Config = {}
 pcall(function()
@@ -76,21 +76,19 @@ local RarityColors = {
 local antiKillEnabled = false
 local _snap = { enabled = false, active = false, y = nil, originY = nil, depth = 10, pos = nil, flickering = false }
 
--- Variables de movimiento
 local InfiniteJumpEnabled = false
 local JumpPowerBypassValue = 50
 local SpeedHackEnabled = false
 local SpeedPercentage = 6
 
--- Variables Mod Car
 local CarSpeedMultiplier = 1.0
 local StableCarEnabled = false
 local CarCfgEnabled = false
 
 -- ==========================================
--- HIDE NAME (●●●●●● on YOUR screen)
+-- HIDE NAME (●●●●●● on YOUR screen) - AUTO ACTIVADO
 -- ==========================================
-local HideNameEnabled = false
+local HideNameEnabled = true
 local HN = { orig = setmetatable({}, { __mode = "k" }), watched = setmetatable({}, { __mode = "k" }) }
 local function esc(s) return (s:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")) end
 
@@ -108,6 +106,7 @@ end
 local function fixLabel(l)
     if not (l:IsA("TextLabel") or l:IsA("TextButton")) or isOurs(l) then return end
     local t = l.Text
+    if type(t) ~= "string" or t == "" then return end
     local pName = LocalPlayer.Name
     local pDisplay = LocalPlayer.DisplayName or ""
     if t:find(pName, 1, true) or (pDisplay ~= "" and t:find(pDisplay, 1, true)) then
@@ -143,7 +142,7 @@ local function setHideName(v)
         scanLabels() 
     else 
         for l, t in pairs(HN.orig) do 
-            if l.Parent then pcall(function() l.Text = t end) end 
+            if l and l.Parent then pcall(function() l.Text = t end) end 
         end 
         HN.orig = setmetatable({}, { __mode = "k" }) 
     end
@@ -160,6 +159,10 @@ end
 LocalPlayer.CharacterAdded:Connect(function(c) 
     task.wait(1.5) 
     if HideNameEnabled then scanLabels() end 
+end)
+
+task.delay(2, function()
+    if HideNameEnabled then scanLabels() end
 end)
 
 -- ==========================================
@@ -531,7 +534,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- GENERAL: SNAP SYSTEM & SNAP CAR
+-- GENERAL: SNAP SYSTEM
 -- ==========================================
 local function performTeleport()
     local char = LocalPlayer.Character
@@ -609,20 +612,8 @@ TabGeneral:Slider({
     end
 })
 
--- ✅ BOTÓN SNAP CAR AGREGADO DEBAJO DEL SNAP NORMAL
-TabGeneral:Button({
-    Title = "Snap Car (Underground)",
-    Callback = function()
-        if ModCar and ModCar.snap then
-            ModCar.snap()
-        else
-            WindUI:Notify({Title="TOM HUB", Content="Mod Car system loading...", Duration=2})
-        end
-    end
-})
-
 -- ==========================================
--- PLAYER: ANTI KILL, JUMP, SPEED, PICKUP & ESP
+-- PLAYER
 -- ==========================================
 TabPlayer:Section({ Title = "Player Functions" })
 
@@ -639,7 +630,7 @@ TabPlayer:Toggle({
 
 TabPlayer:Toggle({
     Title = "Hide Name (●●●●●●)",
-    Default = false,
+    Default = true,
     Callback = function(state)
         setHideName(state)
         WindUI:Notify({ Title = "TOM HUB", Content = state and "Hide Name ENABLED" or "Hide Name DISABLED", Duration = 1.5 })
@@ -961,7 +952,7 @@ end
 
 function ModCar.setCollide(car, on)
     if on then
-        for p, v in pairs(ModCar.uc) do if p.Parent then p.CanCollide = v end end
+        for p, v in pairs(ModCar.uc) do if p and p.Parent then p.CanCollide = v end end
         ModCar.uc = {}
     else
         for _, p in ipairs(car:GetDescendants()) do
@@ -1026,11 +1017,9 @@ function ModCar.snap()
     WindUI:Notify({Title="TOM HUB", Content="Driving underground — press SNAP CAR again to come up", Duration=2})
 end
 
--- Bucle principal de movimiento (Underground & Ground Glide)
 RunService.Heartbeat:Connect(function(dt)
     local car, seat = ModCar.cur()
     
-    -- Underground Logic
     if ModCar.under then
         if not car then
             ModCar.under = false 
@@ -1051,7 +1040,6 @@ RunService.Heartbeat:Connect(function(dt)
         return
     end
 
-    -- Ground Glide Logic
     if not StableCarEnabled or not car then
         if ModCar.kin then 
             ModCar.kin = false 
@@ -1115,7 +1103,6 @@ RunService.Heartbeat:Connect(function(dt)
     if os.clock() - ModCar.ncT > 0.5 then ModCar.ncT = os.clock() ModCar.setCollide(car, false) end
 end)
 
--- Bucle secundario: Inyección de datos internos al motor del juego (Car Config)
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -1156,7 +1143,6 @@ task.spawn(function()
     end
 end)
 
--- UI DE MOD CAR
 TabModCar:Section({ Title = "Vehicle Modifications" })
 
 TabModCar:Button({
@@ -1191,7 +1177,7 @@ TabModCar:Slider({
 })
 
 -- ==========================================
--- SETTINGS: OPTIMIZATION, CONFIG & SERVER
+-- SETTINGS
 -- ==========================================
 TabSettings:Section({ Title = "Optimization & FPS" })
 TabSettings:Toggle({
@@ -1232,7 +1218,6 @@ local DeleteBtn = TabSettings:Button({
 })
 Config:Register("DeleteConfig", DeleteBtn)
 
--- BOTÓN: XBOX SERVER
 local xboxGui = nil
 TabSettings:Button({
     Title = 'Xbox Server',
@@ -1408,7 +1393,7 @@ TabSettings:Button({
 })
 
 -- ==========================================
--- TOP LEFT SNAP BUTTON
+-- ✅ TOP LEFT: SNAP + SNAP CAR BUTTONS (FUERA DEL MENÚ)
 -- ==========================================
 local snapGui = Instance.new("ScreenGui")
 snapGui.Name = "SnapButtonGui"
@@ -1463,11 +1448,41 @@ snapBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+local snapCarBtn = Instance.new("TextButton")
+snapCarBtn.Name = "SnapCarBtn"
+snapCarBtn.Size = UDim2.new(0, 90, 0, 32)
+snapCarBtn.Position = UDim2.new(0, 10, 0, 95)
+snapCarBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+snapCarBtn.Text = "SNAP CAR"
+snapCarBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+snapCarBtn.TextSize = 13
+snapCarBtn.Font = Enum.Font.GothamBold
+snapCarBtn.Parent = snapGui
+Instance.new("UICorner", snapCarBtn).CornerRadius = UDim.new(0, 6)
+
+local snapCarStroke = Instance.new("UIStroke", snapCarBtn)
+snapCarStroke.Color = Color3.fromRGB(0, 0, 0)
+snapCarStroke.Thickness = 1
+
+snapCarBtn.MouseButton1Click:Connect(function()
+    if ModCar and ModCar.snap then
+        ModCar.snap()
+        if ModCar.under then
+            snapCarBtn.Text = "CAR ON"
+            snapCarBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+        else
+            snapCarBtn.Text = "SNAP CAR"
+            snapCarBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+        end
+    else
+        WindUI:Notify({Title="TOM HUB", Content="Mod Car system loading...", Duration=2})
+    end
+end)
+
 -- ==========================================
 -- LÓGICA DE FUNCIONES AGREGADAS
 -- ==========================================
 
--- 1. Lógica de Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if InfiniteJumpEnabled then
         pcall(function()
@@ -1482,7 +1497,6 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- 2. Lógica de Speed Hack
 RunService.Heartbeat:Connect(function(dt)
     if SpeedHackEnabled and LocalPlayer.Character then
         pcall(function()
@@ -1497,7 +1511,6 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- 3. Lógica de Anti Kill
 local function isDowned()
     local char = LocalPlayer.Character
     if not char then return false end
@@ -1652,7 +1665,7 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 --========================================================--
--- ESP ITEMS (INVENTORY VIEWER DE ARMAS)
+-- ESP ITEMS
 --========================================================--
 task.spawn(function()
     while true do
@@ -1738,7 +1751,7 @@ task.spawn(function()
 end)
 
 --========================================================--
--- ITEMS DROPPED (ESP DE ITEMS EN EL SUELO)
+-- ITEMS DROPPED
 --========================================================--
 RunService.RenderStepped:Connect(function()
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1824,7 +1837,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- ✅ BOTÓN FLOTANTE (CUADRADO, ESQUINAS REDONDEADAS, CENTRO DE PANTALLA)
+-- ✅ BOTÓN FLOTANTE (CENTRO DE PANTALLA)
 -- ==========================================
 local TweenService = game:GetService("TweenService")
 
@@ -1869,8 +1882,6 @@ Float.MouseButton1Click:Connect(function()
             Window:SetVisible(uiOpen)
         end
     end)
-    
-    print("El menú cambió a visible =", uiOpen)
 end)
 
 local fDragging, fDragInput, fDragStart, fStartPos = false, nil, nil, nil
@@ -1911,4 +1922,3 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 print("✓ TOM HUB LOADED EXITOSAMENTE!")
-print("✓ Botón flotante: Cuadrado, esquinas redondeadas, ubicado en el CENTRO de la pantalla")
